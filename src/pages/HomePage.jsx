@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { act, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button, Graph, Input, Signup } from '../components'
 import graphService from '../appwrite/config';
@@ -25,8 +25,8 @@ function HomePage() {
 
   function validateDate(inputDate) {
     // Ensure both dates are in 'YYYY-MM-DD' format for comparison
-    const today = new Date().toISOString().split('T')[0]; // Convert today's date to 'YYYY-MM-DD'
-    const userDate = new Date(inputDate).toISOString().split('T')[0]; // Convert inputDate to 'YYYY-MM-DD'
+    const today =  new Date().toLocaleDateString('en-CA'); // Convert today's date to 'YYYY-MM-DD'
+    const userDate = new Date(inputDate).toLocaleDateString('en-CA'); // Convert inputDate to 'YYYY-MM-DD'
   
     // Compare dates: inputDate should not be in the future
     return userDate <= today;
@@ -65,22 +65,17 @@ function HomePage() {
   function calculateStreak(activityDates) {
     if (!activityDates || activityDates.length === 0) return 0;
   
-    // Parse and sort dates
-    const sortedDates = activityDates
-      .map(date => new Date(date))
-      .sort((a, b) => a - b);
-  
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time for today
     let streak = 0;
   
     // Loop through dates from the most recent to the oldest
-    for (let i = sortedDates.length - 1; i >= 0; i--) {
-      const currentDate = sortedDates[i];
-      const previousDate = sortedDates[i - 1];
+    for (let i = activityDates.length - 1; i >= 0; i--) {
+      const currentDate = new Date(activityDates[i]);
+      const previousDate = new Date(activityDates[i - 1]);
   
       // Check if today is part of the streak
-      if (i === sortedDates.length - 1 && currentDate.toDateString() === today.toDateString()) {
+      if (i === activityDates.length - 1 && currentDate.toDateString() === today.toDateString()) {
         streak++; // Include today
         continue;
       }
@@ -89,12 +84,13 @@ function HomePage() {
       if (previousDate && (currentDate - previousDate) / (1000 * 60 * 60 * 24) !== 1) {
         break;
       }
-
+  
       streak++;
     }
   
     return streak;
   }
+  
 
   
   useEffect(() => {
@@ -112,21 +108,26 @@ function HomePage() {
   }, []);
 
 
-    useEffect(() => {
-        // Streak
-        const data = studyHoursData.map((e)=>(
-          new Date(e.date).toISOString().split('T')[0]
-        ))
-        setActivityDates(data);
-        setStreaks(calculateStreak(activityDates));
-        //Total Hours        
-        const hours = studyHoursData.reduce((accumulator,ele)=>{
-            return accumulator + parseInt(ele.studyHours,10);
-        },0)        
-        setNoOfHours(hours)
-
-    },[studyHoursData]);
-
+  useEffect(() => {
+    if (studyHoursData.length > 0) {
+      // Extract and sort activity dates
+      const data = studyHoursData.map((e) => new Date(e.date).toISOString().split('T')[0]); // Ensure date format is 'YYYY-MM-DD'
+      const sortedData = data.sort((a, b) => new Date(a) - new Date(b)); // Sort the dates in ascending order
+  
+      // Calculate streak
+      const calculatedStreak = calculateStreak(sortedData);
+      setStreaks(calculatedStreak);
+      setActivityDates(sortedData); // Update the activity dates
+  
+      // Calculate total hours
+      const hours = studyHoursData.reduce((accumulator, ele) => accumulator + parseFloat(ele.studyHours), 0);
+      setNoOfHours(hours);
+    }
+  }, [studyHoursData]);
+  
+  
+  
+  
 
   return (
     <div className='sm:flex justify-center'>
@@ -214,7 +215,7 @@ function HomePage() {
               className="absolute flex items-center justify-center text-white z-[1] opacity-90 rounded-xl inset-0.5 bg-[#203a22]"
             >
               <div>
-                <p className="text-4xl font-bold mt-2 text-[#35e13a]">{noOfHours} hrs</p>
+                <p className="text-4xl font-bold mt-2 text-[#35e13a]">{parseInt(noOfHours)}<span className='text-sm'>hrs</span></p>
                 <p className="mt-2 text-sm text-gray-400 text-center">Total Hours</p>
               </div>
 
