@@ -13,7 +13,7 @@ function Todos() {
   const todos = useSelector((state) => state.todo.todos);
   const [todoColors, setTodoColors] = useState([]);
   const [isEdit, setIsEdit] = useState({});
-
+  const [error,setError] = useState("");
   const dispatch = useDispatch();
 
   // Function to generate random colors
@@ -45,8 +45,20 @@ function Todos() {
     };
   }
 
+  function todoAlreadyExist(data) {
+    return todos.some((todo) => todo.todo === data.todo);
+  }
+
+  function clearError(){
+    setError("");
+  }
+
   async function addTodo(data) {
     try {
+      if(todoAlreadyExist(data)) {
+        setError("! Todo Already Exist")
+        return
+      };
       const response = await todoService.addTodo({
         ...data,
         userId: user.$id,
@@ -128,10 +140,13 @@ function Todos() {
         {/* Form Section */}
         <div className="flex justify-center mb-6">
           <form onSubmit={handleSubmit(addTodo)}>
+            {error && <p className="text-left text-red-500">{error}</p>}
             <div className="flex items-center space-x-4 pt-4 pb-12">
+              
               <input
                 className=" w-[240px] md:w-[500px] bg-sideBar text-white text-sm md:text-lg px-3 md:px-5 py-1 md:py-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200 ease-in-out h-[50px] md:h-[60px]"
                 type="text"
+                onInput={clearError}
                 placeholder="Enter your todo"
                 {...register("todo", { required: "Todo is required" })}
               />

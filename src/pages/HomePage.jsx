@@ -36,35 +36,43 @@ function HomePage() {
 
   const generateGraph = async (data) => {
     if (!validateDate(data.date)) {
-      setError("Hours can't be set on future dates")
+      setError("Hours can't be set on future dates");
       return;
     }
-    if(data.studyHours < 0 || data.studyHours > 24){
+    if (data.studyHours < 0 || data.studyHours > 24) {
       setError("Study hours should be between 0 and 24");
       return;
     }
+  
     try {
       const studyHours = parseFloat(data.studyHours);
       const compositeKey = `${user.$id}_${data.date}`;
-
+      console.log("Data ", data);
+  
       // Save the data
       await graphService.saveGraphData({ ...data, compositeKey, userId: user.$id, studyHours });
-
-      // After saving, fetch the updated study hours and date
-      const hoursAndDate = await graphService.getStudyHoursAndDate(user.$id);
-      setStudyHoursData(hoursAndDate);
+  
+      // Insert the new entry into the existing data in sorted order
+      const newEntry = { date: data.date, studyHours };
+      const updatedStudyHoursData = [...studyHoursData, newEntry].sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+      );
+  
+      setStudyHoursData(updatedStudyHoursData);
       reset();
     } catch (error) {
       setError(error.message);
       console.log(error);
     }
-  }
+  };
+  
 
 
 
   function calculateStreak(activityDates) {
     if (!activityDates || activityDates.length === 0) return 0;
-  
+    console.log("Activity Date ",activityDates);
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time for today
     let streak = 0;
@@ -98,7 +106,10 @@ function HomePage() {
     async function fetchData() {
       try {
         const hoursAndDate = await graphService.getStudyHoursAndDate(user.$id);
-        setStudyHoursData(hoursAndDate);   
+        const sortedData = hoursAndDate.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log("Sorted Data after fetching ",sortedData);
+
+        setStudyHoursData(sortedData);   
       } catch (error) {
         console.log("Error fetching study hours and date", error);
       }
@@ -111,13 +122,13 @@ function HomePage() {
   useEffect(() => {
     if (studyHoursData.length > 0) {
       // Extract and sort activity dates
+     
       const data = studyHoursData.map((e) => new Date(e.date).toISOString().split('T')[0]); // Ensure date format is 'YYYY-MM-DD'
-      const sortedData = data.sort((a, b) => new Date(a) - new Date(b)); // Sort the dates in ascending order
-  
+      console.log("Sorted Date " ,data);  
       // Calculate streak
-      const calculatedStreak = calculateStreak(sortedData);
+      const calculatedStreak = calculateStreak(data);
       setStreaks(calculatedStreak);
-      setActivityDates(sortedData); // Update the activity dates
+      setActivityDates(data); // Update the activity dates
   
       // Calculate total hours
       const hours = studyHoursData.reduce((accumulator, ele) => accumulator + parseFloat(ele.studyHours), 0);
